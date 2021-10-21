@@ -1,0 +1,7 @@
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+__pycache__
+devops-container
+cloudplex-devops-tfprovision-container
+terraform_tfsec.egg-info

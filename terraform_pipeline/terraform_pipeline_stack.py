@@ -23,14 +23,20 @@ class TerraformPipelineStack(core.Construct) :
         super().__init__(scope=scope, id=id)
         account = scope.account
         region = scope.region        
-        name = scope.node.try_get_context("name")
+        name = id
         
         # Terraform codecommit Repo
-        codecommit_repo = codecommit.Repository(
+        # codecommit_repo = codecommit.Repository(
+        #     scope=self,
+        #     id=f"{name}-code",
+        #     repository_name=f"{name}",
+        #     description=f"Terraform {name} code"
+        # )
+
+        codecommit_repo = codecommit.Repository.from_repository_name(
             scope=self,
             id=f"{name}-code",
             repository_name=f"{name}",
-            description=f"Terraform code"
         )
 
         pipeline = codepipeline.Pipeline(
@@ -109,8 +115,9 @@ class TerraformPipelineStack(core.Construct) :
                     "phases": { 
                     "build": {
                         "commands": [
-                            "terraform init",
-                            "terraform plan",
+                            "git config --global url.'https://nauco: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@github.com'.insteadOf 'https://github.com'",
+                            "terraform init -backend-config=dev/backend_apne2_dev.hcl",
+                            "terraform plan -var-file=dev/apne2_dev.tfvars",
                             "export BuildID=`echo $CODEBUILD_BUILD_ID | cut -d: -f1`",
                             "export BuildTag=`echo $CODEBUILD_BUILD_ID | cut -d: -f2`",
                             "export Region=$AWS_REGION",
@@ -132,8 +139,9 @@ class TerraformPipelineStack(core.Construct) :
                     "phases": { 
                     "build": {
                         "commands": [
-                            "terraform init",
-                            "terraform apply -auto-approve"
+                            "git config --global url.'https://nauco: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@github.com'.insteadOf 'https://github.com'",
+                            "terraform init -backend-config=dev/backend_apne2_dev.hcl",
+                            "terraform apply -var-file=dev/apne2_dev.tfvars -auto-approve"
                         ]
                      }
                     }
@@ -143,20 +151,20 @@ class TerraformPipelineStack(core.Construct) :
 
         terraform_plan.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=["ec2:*"],
+            actions=["*"],
             resources=[f"*"],))
 
         terraform_apply.add_to_role_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
-            actions=["ec2:*"],
-            resources=[f"*"],))  
+            actions=["*"],
+            resources=[f"*"],))
 
 
         source_action = codepipeline_actions.CodeCommitSourceAction(
             action_name="CodeCommit_Source",
             repository=codecommit_repo,
             output=source_output,
-            branch="main"
+            branch="master"
         )
 
         pipeline.add_stage(
